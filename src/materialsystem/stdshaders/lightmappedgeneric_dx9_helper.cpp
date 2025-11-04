@@ -22,7 +22,14 @@ ConVar mat_fullbright( "mat_fullbright","0", FCVAR_CHEAT );
 ConVar my_mat_fullbright( "mat_fullbright","0", FCVAR_CHEAT );
 
 ConVar r_lightmap_bicubic( "r_lightmap_bicubic", "0", FCVAR_NONE, "Enable bi-cubic (high quality) lightmap sampling." );
+
+// Tonemapping and Color Grading ConVars
 ConVar mat_tonemapping_mode( "mat_tonemapping_mode", "0", FCVAR_ARCHIVE, "Tonemapping mode: 0=None, 1=Linear, 2=Gamma, 3=ACES" );
+ConVar mat_exposure( "mat_exposure", "0.0", FCVAR_ARCHIVE, "HDR exposure adjustment in EV stops (0=normal, +1=double, -1=half)" );
+ConVar mat_saturation( "mat_saturation", "1.0", FCVAR_ARCHIVE, "Color saturation (0=grayscale, 1=normal, 2=vivid)" );
+ConVar mat_contrast( "mat_contrast", "1.0", FCVAR_ARCHIVE, "Contrast adjustment (0=flat gray, 1=normal, 2=high contrast)" );
+ConVar mat_brightness( "mat_brightness", "1.0", FCVAR_ARCHIVE, "Brightness adjustment (0=black, 1=normal, 2=double)" );
+ConVar mat_color_temperature( "mat_color_temperature", "6500", FCVAR_ARCHIVE, "White balance in Kelvin (2000=warm, 6500=neutral, 10000=cool)" );
 
 extern ConVar r_flashlight_version2;
 
@@ -993,6 +1000,22 @@ void DrawLightmappedGeneric_DX9_Internal(CBaseVSShader *pShader, IMaterialVar** 
 				DynamicCmdsOut.SetPixelShaderConstant( 31, vScreenScale, 1 );
 			}
 		}
+
+		// Set color grading parameters (Source 1.5) - Register c27
+		float colorGradingParams1[4];
+		colorGradingParams1[0] = mat_exposure.GetFloat();
+		colorGradingParams1[1] = mat_saturation.GetFloat();
+		colorGradingParams1[2] = mat_contrast.GetFloat();
+		colorGradingParams1[3] = mat_brightness.GetFloat();
+		DynamicCmdsOut.SetPixelShaderConstant( 27, colorGradingParams1, 1 );
+
+		// Set color temperature parameter - Register c26
+		float colorGradingParams2[4];
+		colorGradingParams2[0] = mat_color_temperature.GetFloat();
+		colorGradingParams2[1] = 0.0f; // Reserved
+		colorGradingParams2[2] = 0.0f; // Reserved
+		colorGradingParams2[3] = 0.0f; // Reserved
+		DynamicCmdsOut.SetPixelShaderConstant( 26, colorGradingParams2, 1 );
 
 		DynamicCmdsOut.End();
 		pShaderAPI->ExecuteCommandBuffer( DynamicCmdsOut.Base() );

@@ -52,6 +52,17 @@ const float4 cLightScale : register( c30 );
 #define ENV_MAP_SCALE (cLightScale.z)
 #define GAMMA_LIGHT_SCALE (cLightScale.w)
 
+// Color grading parameters (Source 1.5)
+const float4 cColorGradingParams1 : register( c27 );
+#define COLOR_GRADING_EXPOSURE (cColorGradingParams1.x)
+#define COLOR_GRADING_SATURATION (cColorGradingParams1.y)
+#define COLOR_GRADING_CONTRAST (cColorGradingParams1.z)
+#define COLOR_GRADING_BRIGHTNESS (cColorGradingParams1.w)
+
+const float4 cColorGradingParams2 : register( c26 );
+#define COLOR_GRADING_TEMPERATURE (cColorGradingParams2.x)
+// .y, .z, .w reserved for future use
+
 // Flashlight constants
 #if defined(SHADER_MODEL_PS_2_0) || defined(SHADER_MODEL_PS_2_B) || defined(SHADER_MODEL_PS_3_0)
  const float4 cFlashlightColor       : register( c28 );
@@ -515,6 +526,8 @@ float3 AdjustBrightness( float3 color, float brightness )
 float4 FinalOutput( const float4 vShaderColor, float pixelFogFactor, const int iPIXELFOGTYPE, const int iTONEMAP_SCALE_TYPE, const bool bWriteDepthToDestAlpha = false, const float flProjZ = 1.0f )
 {
 	float4 result;
+
+	// Step 1: Apply tonemapping (HDR to LDR)
 	if( iTONEMAP_SCALE_TYPE == TONEMAP_SCALE_LINEAR )
 	{
 		result.rgb = vShaderColor.rgb * LINEAR_LIGHT_SCALE;
@@ -532,14 +545,44 @@ float4 FinalOutput( const float4 vShaderColor, float pixelFogFactor, const int i
 	{
 		result.rgb = vShaderColor.rgb;
 	}
-	
+
+	// Step 2: Apply color grading pipeline (Source 1.5)
+	// Only apply if parameters differ from defaults to avoid unnecessary work
+	if( COLOR_GRADING_EXPOSURE != 0.0f )
+	{
+		result.rgb = AdjustExposure( result.rgb, COLOR_GRADING_EXPOSURE );
+	}
+
+	if( COLOR_GRADING_SATURATION != 1.0f )
+	{
+		result.rgb = AdjustSaturation( result.rgb, COLOR_GRADING_SATURATION );
+	}
+
+	if( COLOR_GRADING_CONTRAST != 1.0f )
+	{
+		result.rgb = AdjustContrast( result.rgb, COLOR_GRADING_CONTRAST );
+	}
+
+	if( COLOR_GRADING_BRIGHTNESS != 1.0f )
+	{
+		result.rgb = AdjustBrightness( result.rgb, COLOR_GRADING_BRIGHTNESS );
+	}
+
+	if( COLOR_GRADING_TEMPERATURE != 6500.0f )
+	{
+		result.rgb = AdjustColorTemperature( result.rgb, COLOR_GRADING_TEMPERATURE );
+	}
+
+	// Step 3: Preserve alpha channel
 	if( bWriteDepthToDestAlpha )
 		result.a = DepthToDestAlpha( flProjZ );
 	else
 		result.a = vShaderColor.a;
 
+	// Step 4: Apply fog blending
 	result.rgb = BlendPixelFog( result.rgb, pixelFogFactor, g_LinearFogColor.rgb, iPIXELFOGTYPE );
-	
+
+	// Step 5: sRGB conversion for display
 #if !(defined(SHADER_MODEL_PS_1_1) || defined(SHADER_MODEL_PS_1_4) || defined(SHADER_MODEL_PS_2_0)) //Minimum requirement of ps2b
 	result.rgb = SRGBOutput( result.rgb ); //SRGB in pixel shader conversion
 #endif
