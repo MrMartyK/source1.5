@@ -51,14 +51,12 @@ jobs:
         run: |
           call createallprojects.bat
 
-      - name: Build everything.sln (Release|x64)
+      - name: Build everything.sln (VPC defaults + deterministic)
         working-directory: src
         shell: pwsh
         run: >
           msbuild everything.sln
           /m
-          /p:Configuration=${{ env.BUILD_TYPE }}
-          /p:Platform=x64
           /p:UseMultiToolTask=true
           /p:Deterministic=true
           /v:m
@@ -130,7 +128,18 @@ jobs:
         run: |
           if (Test-Path ".clang-format") {
             $files = git ls-files *.h *.hpp *.c *.cpp
-            if ($files) { clang-format --dry-run --Werror $files }
+            if ($files) {
+              # Process in batches to avoid Windows command line length limits
+              $files | ForEach-Object -Begin { $batch = @() } -Process {
+                $batch += $_
+                if ($batch.Count -eq 50) {
+                  clang-format --dry-run --Werror $batch
+                  $batch = @()
+                }
+              } -End {
+                if ($batch.Count -gt 0) { clang-format --dry-run --Werror $batch }
+              }
+            }
           } else {
             echo "No .clang-format yet; skipping."
           }
