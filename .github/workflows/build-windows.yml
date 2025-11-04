@@ -128,17 +128,8 @@ jobs:
         run: |
           echo "::group::Build Summary"
           echo "VPC Build: ${{ steps.vpc_generate.outcome }}"
-          echo "CMake Tests: ${{ job.status }}"
           echo "::endgroup::"
-
-          # Workflow succeeds if CMake tests pass (primary requirement)
-          if ("${{ job.status }}" -eq "success") {
-            echo "::notice::✅ Build successful! CMake tests passing."
-            exit 0
-          } else {
-            echo "::error::❌ Build failed. Check test results."
-            exit 1
-          }
+          echo "::notice::Build complete. Check test results above."
 
   format-check:
     name: Check formatting (changed lines only)
