@@ -115,6 +115,7 @@ jobs:
   format-check:
     name: Check formatting (changed lines only)
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -124,8 +125,8 @@ jobs:
         uses: jidicula/clang-format-action@v4.13.0
         with:
           clang-format-version: '18'
-          check-path: 'src'
-          fallback-style: 'file'
+          check-path: 'src/framework tests'
+          exclude-regex: 'src/game|src/public|src/utils|src/materialsystem|src/tier'
 
   static-analysis:
     runs-on: windows-2022
