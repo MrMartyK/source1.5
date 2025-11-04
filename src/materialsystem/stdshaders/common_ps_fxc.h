@@ -364,6 +364,117 @@ float3 ACESFilm( float3 x )
 	return saturate( (x * (a * x + b)) / (x * (c * x + d) + e) );
 }
 
+/**
+ * Convert linear RGB to gamma-corrected sRGB
+ *
+ * Applies gamma 2.2 curve for display output.
+ * Formula: sRGB = linear^(1/2.2)
+ *
+ * @param linear Input color in linear space
+ * @return Output color in sRGB gamma space
+ */
+float3 LinearToGamma( float3 linear )
+{
+	const float gamma = 1.0f / 2.2f;
+	return pow( linear, gamma );
+}
+
+/**
+ * Convert gamma-corrected sRGB to linear RGB
+ *
+ * Inverse of LinearToGamma, converts display colors to linear for processing.
+ * Formula: linear = sRGB^2.2
+ *
+ * @param srgb Input color in sRGB gamma space
+ * @return Output color in linear space
+ */
+float3 GammaToLinear( float3 srgb )
+{
+	const float gamma = 2.2f;
+	return pow( srgb, gamma );
+}
+
+/**
+ * Adjust exposure using EV (exposure value) stops
+ *
+ * Exposure adjustment in photographic stops (EV).
+ * Each stop doubles or halves the brightness.
+ * Formula: result = color * 2^ev
+ *
+ * @param color Input HDR color
+ * @param ev Exposure adjustment in stops (0 = no change, +1 = double, -1 = half)
+ * @return Exposure-adjusted color
+ */
+float3 AdjustExposure( float3 color, float ev )
+{
+	float multiplier = pow( 2.0f, ev );
+	return color * multiplier;
+}
+
+/**
+ * Adjust color saturation
+ *
+ * Controls the intensity of colors relative to grayscale.
+ * 0 = full desaturation (grayscale)
+ * 1 = no change
+ * >1 = increased saturation
+ *
+ * @param color Input color
+ * @param saturation Saturation multiplier (0 to 2+)
+ * @return Saturation-adjusted color
+ */
+float3 AdjustSaturation( float3 color, float saturation )
+{
+	// Calculate luminance using Rec. 709 coefficients
+	const float r_weight = 0.2126f;
+	const float g_weight = 0.7152f;
+	const float b_weight = 0.0722f;
+
+	float luminance = dot( color, float3( r_weight, g_weight, b_weight ) );
+
+	// Lerp between grayscale (luminance) and original color
+	float3 grayscale = float3( luminance, luminance, luminance );
+	return lerp( grayscale, color, saturation );
+}
+
+/**
+ * Adjust color temperature (white balance)
+ *
+ * Adjusts the color temperature in Kelvin to simulate different lighting conditions.
+ * 6500K = neutral (daylight)
+ * <6500K = warm (orange/red tint)
+ * >6500K = cool (blue tint)
+ *
+ * HLSL simplified version - uses preset factors for common temperatures
+ * For full algorithm, see C++ implementation (Planckian locus approximation)
+ *
+ * @param color Input color
+ * @param kelvin Temperature in Kelvin (1000-40000)
+ * @return Temperature-adjusted color
+ */
+float3 AdjustColorTemperature( float3 color, float kelvin )
+{
+	float3 factor = float3( 1.0f, 1.0f, 1.0f );
+
+	// Simplified temperature adjustment using linear interpolation
+	// For warm temps (< 6500K), boost red, reduce blue
+	if ( kelvin < 6500.0f )
+	{
+		float warmth = saturate( (6500.0f - kelvin) / 4500.0f ); // 0-1 range for 2000K-6500K
+		factor.r = 1.0f + warmth * 0.3f; // Boost red
+		factor.b = 1.0f - warmth * 0.7f; // Reduce blue
+	}
+	// For cool temps (> 6500K), reduce red, boost blue
+	else if ( kelvin > 6500.0f )
+	{
+		float coolness = saturate( (kelvin - 6500.0f) / 3500.0f ); // 0-1 range for 6500K-10000K
+		factor.r = 1.0f - coolness * 0.3f; // Reduce red
+		factor.b = 1.0f + coolness * 0.3f; // Boost blue
+	}
+
+	return color * factor;
+}
+
 float4 FinalOutput( const float4 vShaderColor, float pixelFogFactor, const int iPIXELFOGTYPE, const int iTONEMAP_SCALE_TYPE, const bool bWriteDepthToDestAlpha = false, const float flProjZ = 1.0f )
 {
 	float4 result;
