@@ -43,7 +43,7 @@ jobs:
     - name: Build everything.sln
       working-directory: src
       run: |
-        msbuild everything.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal
+        msbuild everything.sln /m /v:minimal
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
