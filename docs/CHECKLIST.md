@@ -16,13 +16,13 @@
 * [x] **CMake**: root + targets `lib_framework`, `lib_engine_bridge`, `tests`
 * [x] **Unit test harness**: Catch2; `tests/test_string_utils.cpp` passing
 * [x] **Static analysis**: clang-tidy + cppcheck wired; fail on new issues
-* [ ] **Parity harness**: headless launch, screenshot capture, SSIM diff script
-* [ ] **Golden content script** (`scripts/fetch_golden_content`): copies maps from local Steam, not tracked
-* [x] **Docs**: `PHASE_0_WEEK_1.md`, `ARCHITECTURE.md`, `GOLDEN_CONTENT.md` updated
+* [x] **Parity harness**: headless launch, screenshot capture, SSIM diff script (parity_test.py)
+* [x] **Golden content script** (`scripts/fetch_golden_content.py`): copies maps from local Steam, not tracked
+* [x] **Docs**: Comprehensive documentation including testing tools (scripts/README.md)
 
 **DoD:** CI green; unit tests run in CI; parity script produces a report; docs published.
 
-**STATUS**: ✅ 70% Complete (CI green, tests passing, docs comprehensive)
+**STATUS**: ✅ 100% Complete (All Phase 0 foundation items complete)
 
 ---
 

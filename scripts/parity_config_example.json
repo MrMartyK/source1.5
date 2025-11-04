@@ -1,0 +1,53 @@
+{
+  "map_name": "pl_badwater",
+  "game_dir": "game",
+  "screenshot_dir": "parity_screenshots",
+  "golden_dir": "parity_golden",
+  "timeout": 45,
+  "cvars": {
+    "r_lightmap_bicubic": "1",
+    "mat_tonemapping_mode": "3",
+    "mat_exposure": "0.0",
+    "mat_fullbright": "0",
+    "fov_desired": "90",
+    "mat_hdr_level": "2"
+  },
+  "test_positions": [
+    {
+      "name": "spawn_blu",
+      "x": "-3072",
+      "y": "2560",
+      "z": "384",
+      "pitch": "0",
+      "yaw": "90",
+      "ssim_threshold": 0.95
+    },
+    {
+      "name": "mid_outdoors",
+      "x": "1024",
+      "y": "0",
+      "z": "256",
+      "pitch": "10",
+      "yaw": "180",
+      "ssim_threshold": 0.95
+    },
+    {
+      "name": "final_point",
+      "x": "3584",
+      "y": "-1024",
+      "z": "192",
+      "pitch": "-10",
+      "yaw": "270",
+      "ssim_threshold": 0.95
+    },
+    {
+      "name": "indoor_corridor",
+      "x": "512",
+      "y": "1024",
+      "z": "128",
+      "pitch": "0",
+      "yaw": "45",
+      "ssim_threshold": 0.90
+    }
+  ]
+}

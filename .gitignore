@@ -1,5 +1,12 @@
 # Files to ignore when considering what GIT should commit.
 
+# Golden content (test maps, not tracked)
+golden_content/
+
+# Parity testing outputs (not tracked)
+parity_screenshots/
+parity_golden/
+
 # Visual Studio 
 *.suo
 *.user
