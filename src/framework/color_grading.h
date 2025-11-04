@@ -153,6 +153,16 @@ void GenerateSSAOKernel(int sampleCount, Vector3* kernel);
  */
 float CalculateSSAOOcclusion(const float* sampleDepths, float centerDepth, float radius, int sampleCount);
 
+/**
+ * Generate SSAO noise texture data (4x4 random rotation vectors)
+ *
+ * Creates random tangent-space rotation vectors for SSAO sampling.
+ * This creates a 4x4 tiled noise pattern to randomize SSAO samples.
+ *
+ * @param noiseData Output array of 16 Vector3 (4x4 texture)
+ */
+void GenerateSSAONoise(Vector3* noiseData);
+
 } // namespace S15
 
 #endif // COLOR_GRADING_H

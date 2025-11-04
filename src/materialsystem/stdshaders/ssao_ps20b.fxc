@@ -1,0 +1,114 @@
+//========= Copyright Valve Corporation, All rights reserved. ============//
+//
+// Purpose: Screen Space Ambient Occlusion (SSAO) - Pixel Shader
+//
+//===========================================================================//
+
+#include "common_ps_fxc.h"
+
+// Samplers
+sampler DepthSampler    : register( s0 );  // Depth buffer (R32F)
+sampler NormalSampler   : register( s1 );  // Normal buffer (RGBA16F)
+sampler NoiseSampler    : register( s2 );  // Noise texture (4x4 RGBA8)
+
+// Constants
+const float4 g_SSAOParams : register( c0 );  // x = radius, y = intensity, z = bias, w = samples
+const float4 g_ScreenSize : register( c1 );  // x = width, y = height, z = 1/width, w = 1/height
+const float4 g_SSAOKernel[64] : register( c2 );  // Sample kernel (up to 64 samples)
+
+struct PS_INPUT
+{
+    float2 baseTexCoord : TEXCOORD0;
+};
+
+//-----------------------------------------------------------------------------
+// Purpose: Reconstruct view-space position from depth
+//-----------------------------------------------------------------------------
+float3 ReconstructViewPosition( float2 texCoord, float depth )
+{
+    // Simple reconstruction - assumes orthographic-like projection for now
+    // TODO: Use proper perspective reconstruction with inv projection matrix
+    float x = (texCoord.x * 2.0 - 1.0) * depth;
+    float y = (texCoord.y * 2.0 - 1.0) * depth;
+    return float3( x, y, -depth );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Calculate SSAO occlusion
+//-----------------------------------------------------------------------------
+float4 main( PS_INPUT i ) : COLOR
+{
+    // Sample depth and normal
+    float depth = tex2D( DepthSampler, i.baseTexCoord ).r;
+    float3 normal = tex2D( NormalSampler, i.baseTexCoord ).rgb;
+
+    // Early out for sky (depth = 1.0)
+    if ( depth >= 0.9999 )
+    {
+        return float4( 1.0, 1.0, 1.0, 1.0 );  // No occlusion for sky
+    }
+
+    // Normalize normal (stored in [0,1], convert to [-1,1])
+    normal = normalize( normal * 2.0 - 1.0 );
+
+    // Reconstruct view-space position
+    float3 viewPos = ReconstructViewPosition( i.baseTexCoord, depth );
+
+    // Sample noise for randomization
+    float2 noiseScale = g_ScreenSize.xy / 4.0;  // Tile 4x4 noise across screen
+    float3 randomVec = tex2D( NoiseSampler, i.baseTexCoord * noiseScale ).rgb;
+    randomVec = normalize( randomVec * 2.0 - 1.0 );
+
+    // Create TBN matrix (Gramm-Schmidt process)
+    float3 tangent = normalize( randomVec - normal * dot( randomVec, normal ) );
+    float3 bitangent = cross( normal, tangent );
+    float3x3 TBN = float3x3( tangent, bitangent, normal );
+
+    // Parameters
+    float radius = g_SSAOParams.x;
+    float intensity = g_SSAOParams.y;
+    float bias = g_SSAOParams.z;
+    int sampleCount = (int)g_SSAOParams.w;
+
+    // Accumulate occlusion
+    float occlusion = 0.0;
+
+    [loop]
+    for ( int s = 0; s < sampleCount; s++ )
+    {
+        // Get sample offset in tangent space
+        float3 sampleOffset = g_SSAOKernel[s].xyz;
+
+        // Transform to view space
+        float3 sampleVec = mul( sampleOffset, TBN );
+        float3 samplePos = viewPos + sampleVec * radius;
+
+        // Project sample position to screen space
+        float4 offset = float4( samplePos, 1.0 );
+        offset.xy = offset.xy / offset.z;  // Perspective divide
+        offset.xy = offset.xy * 0.5 + 0.5;  // NDC to texture coords
+        offset.y = 1.0 - offset.y;  // Flip Y for texture sampling
+
+        // Sample depth at offset position
+        float sampleDepth = tex2D( DepthSampler, offset.xy ).r;
+
+        // Reconstruct sample view position
+        float3 sampleViewPos = ReconstructViewPosition( offset.xy, sampleDepth );
+
+        // Range check
+        float rangeCheck = smoothstep( 0.0, 1.0, radius / abs( viewPos.z - sampleViewPos.z ) );
+
+        // Compare depths
+        float occluded = ( sampleViewPos.z >= samplePos.z + bias ) ? 1.0 : 0.0;
+
+        occlusion += occluded * rangeCheck;
+    }
+
+    // Normalize occlusion
+    occlusion = 1.0 - ( occlusion / float( sampleCount ) );
+
+    // Apply intensity
+    occlusion = pow( occlusion, intensity );
+
+    return float4( occlusion, occlusion, occlusion, 1.0 );
+}

@@ -49,12 +49,13 @@
 * [x] **ACES tonemap** (`mat_tonemapping_mode 3`)
 * [x] **Color grading pipeline** (8 functions: exposure, saturation, contrast, brightness, temperature, gamma)
 * [x] **SSAO foundation** (C++ reference, HLSL shaders, ConVars, tests ✅)
-* [ ] **SSAO integration** (render targets, passes, blur, lighting)
+* [x] **SSAO integration** (render targets ✅, compute pass ✅, bilateral blur ✅, noise generation ✅)
+* [ ] **SSAO lighting integration** (multiply diffuse/ambient by occlusion)
 * [ ] **Parity screenshots**: before/after; SSIM thresholds documented
 
 **DoD:** Visual diffs show expected change; ≤5% perf hit; toggleable via cvars; parity scenes pass.
 
-**STATUS**: 🔄 85% Complete (bicubic ✅, ACES ✅, color grading ✅, SSAO foundation ✅)
+**STATUS**: 🔄 95% Complete (bicubic ✅, ACES ✅, color grading ✅, SSAO render pipeline ✅, lighting integration pending)
 
 ---
 
@@ -150,7 +151,17 @@
 - [x] PBR shader foundation (BRDF, VS/PS, material system)
 - [x] Fix Windows MSVC compiler detection (engine_bridge compiles)
 
-### 🔄 In Progress (Day 5 continuation)
+### ✅ Day 5 Extended - SSAO Integration
+- [x] SSAO render target setup (5 render targets: depth, normal, SSAO, blur, noise)
+- [x] SSAO compute shader (ssao_ps20b.fxc, hemisphere sampling)
+- [x] SSAO material system integration (ssao_dx9.cpp)
+- [x] Bilateral blur shader (ssao_blur_ps20b.fxc, depth-aware)
+- [x] Blur material system integration (ssao_blur_dx9.cpp)
+- [x] SSAO noise texture generation (4x4 random rotations)
+- [x] Comprehensive integration documentation (SSAO_INTEGRATION.md, 500+ lines)
+
+### 🔄 In Progress (Next)
+- [ ] SSAO lighting integration (modify lighting shaders)
 - [ ] PBR shader build integration (add to shader compile system)
 
 ---
@@ -216,17 +227,17 @@
 
 ## Progress Summary
 
-**Overall**: 45% Complete (Phases 0-3 in progress)
+**Overall**: 48% Complete (Phases 0-3 in progress)
 
-**Current Focus**: Phase 3 PBR Materials (shader foundation complete)
+**Current Focus**: Phase 2 SSAO Integration (95% complete), Phase 3 PBR Materials
 
-**Recent**: SSAO foundation ✅, PBR shaders ✅, compiler fixes ✅
+**Recent**: SSAO render pipeline ✅, bilateral blur ✅, render targets ✅, noise generation ✅
 
-**Next**: Shader build integration, material library creation
+**Next**: SSAO lighting integration, PBR shader compilation, material library
 
 **Blockers**: None (CI green, tests passing, docs current)
 
 ---
 
-*Last updated: 2025-11-03 (Day 5 continuation)*
-*Active sprint: PBR shader foundation complete, continuing roadmap execution*
+*Last updated: 2025-11-04 (Day 5 extended - SSAO integration)*
+*Active sprint: SSAO render pipeline complete, PBR shader foundation ready*

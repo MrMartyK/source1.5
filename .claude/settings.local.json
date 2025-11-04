@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(dir \"C:\\Projects\\Code\\source-sdk-2013\" /B)",
+      "Bash(find:*)",
+      "Bash(git -C \"C:\\Projects\\Code\\source-sdk-2013\" log --oneline -20)",
+      "Bash(git -C \"C:\\Projects\\Code\\source-sdk-2013\" branch -a)",
+      "Bash(git -C:*)",
+      "WebSearch",
+      "WebFetch(domain:secret.club)",
+      "WebFetch(domain:neodyme.io)",
+      "Bash(git remote add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git log:*)",
+      "Bash(dir:*)",
+      "allow everything"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

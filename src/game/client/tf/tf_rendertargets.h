@@ -28,12 +28,33 @@ public:
 	virtual void InitClientRenderTargets( IMaterialSystem* pMaterialSystem, IMaterialSystemHardwareConfig* pHardwareConfig );
 	virtual void ShutdownClientRenderTargets();
 
+	// SSAO render target accessors
+	ITexture* GetSSAODepthTexture() { return m_SSAODepthTexture; }
+	ITexture* GetSSAONormalTexture() { return m_SSAONormalTexture; }
+	ITexture* GetSSAOTexture() { return m_SSAOTexture; }
+	ITexture* GetSSAOBlurTexture() { return m_SSAOBlurTexture; }
+	ITexture* GetSSAONoiseTexture() { return m_SSAONoiseTexture; }
+
 private:
 	ITexture *CreateItemModelPanelTexture( const char *pszName, IMaterialSystem* pMaterialSystem, int iSize );
+
+	// SSAO render target creation
+	ITexture *CreateSSAODepthTexture( IMaterialSystem* pMaterialSystem );
+	ITexture *CreateSSAONormalTexture( IMaterialSystem* pMaterialSystem );
+	ITexture *CreateSSAOTexture( IMaterialSystem* pMaterialSystem );
+	ITexture *CreateSSAOBlurTexture( IMaterialSystem* pMaterialSystem );
+	ITexture *CreateSSAONoiseTexture( IMaterialSystem* pMaterialSystem );
 
 private:
 	// Used for rendering item model panels.
 	CUtlVector< CTextureReference >		m_tfRenderTargets;
+
+	// SSAO render targets
+	CTextureReference		m_SSAODepthTexture;
+	CTextureReference		m_SSAONormalTexture;
+	CTextureReference		m_SSAOTexture;
+	CTextureReference		m_SSAOBlurTexture;
+	CTextureReference		m_SSAONoiseTexture;
 };
 
 extern CTFRenderTargets* g_pTFRenderTargets;

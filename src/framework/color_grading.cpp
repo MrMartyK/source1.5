@@ -286,4 +286,29 @@ float CalculateSSAOOcclusion(const float* sampleDepths, float centerDepth, float
 	return occlusionFactor;
 }
 
+void GenerateSSAONoise(Vector3* noiseData) {
+	// Generate 4x4 grid of random rotation vectors
+	// These are used to randomize SSAO sample kernel rotations
+	// to reduce banding artifacts
+
+	std::srand(1337); // Fixed seed for deterministic results
+
+	for (int i = 0; i < 16; i++) {
+		// Random rotation vector in XY plane (tangent space)
+		Vector3 noise;
+		noise.x = RandomFloat() * 2.0f - 1.0f; // [-1, 1]
+		noise.y = RandomFloat() * 2.0f - 1.0f; // [-1, 1]
+		noise.z = 0.0f; // No rotation in Z (stays in tangent plane)
+
+		// Normalize
+		float length = std::sqrt(noise.x * noise.x + noise.y * noise.y);
+		if (length > 0.001f) {
+			noise.x /= length;
+			noise.y /= length;
+		}
+
+		noiseData[i] = noise;
+	}
+}
+
 } // namespace S15

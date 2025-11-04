@@ -1,0 +1,87 @@
+//========= Copyright Valve Corporation, All rights reserved. ============//
+//
+// Purpose: SSAO Bilateral Blur - Pixel Shader
+//          Depth-aware blur to preserve edges while smoothing SSAO
+//
+//===========================================================================//
+
+#include "common_ps_fxc.h"
+
+// Samplers
+sampler SSAOSampler  : register( s0 );  // Raw SSAO texture
+sampler DepthSampler : register( s1 );  // Depth buffer for edge detection
+
+// Constants
+const float4 g_BlurParams : register( c0 );  // x = blur direction X, y = blur direction Y, z = depth threshold, w = unused
+
+struct PS_INPUT
+{
+    float2 baseTexCoord : TEXCOORD0;
+};
+
+//-----------------------------------------------------------------------------
+// Purpose: Bilateral blur with depth awareness
+//          Blurs SSAO while preserving edges based on depth discontinuities
+//-----------------------------------------------------------------------------
+float4 main( PS_INPUT i ) : COLOR
+{
+    // Sample center depth
+    float centerDepth = tex2D( DepthSampler, i.baseTexCoord ).r;
+
+    // Early out for sky
+    if ( centerDepth >= 0.9999 )
+    {
+        return float4( 1.0, 1.0, 1.0, 1.0 );
+    }
+
+    // Blur parameters
+    float2 blurDir = g_BlurParams.xy;
+    float depthThreshold = g_BlurParams.z;
+
+    // Gaussian weights for 7-tap filter
+    const float weights[7] = { 0.0702, 0.1311, 0.1907, 0.2080, 0.1907, 0.1311, 0.0702 };
+    const int radius = 3;
+
+    // Accumulate weighted samples
+    float totalWeight = 0.0;
+    float blurredValue = 0.0;
+
+    [unroll]
+    for ( int tap = -radius; tap <= radius; tap++ )
+    {
+        // Calculate sample offset
+        float2 offset = blurDir * float( tap );
+        float2 sampleCoord = i.baseTexCoord + offset;
+
+        // Sample SSAO and depth
+        float ssaoValue = tex2D( SSAOSampler, sampleCoord ).r;
+        float sampleDepth = tex2D( DepthSampler, sampleCoord ).r;
+
+        // Calculate depth-based weight
+        float depthDiff = abs( centerDepth - sampleDepth );
+        float depthWeight = ( depthDiff < depthThreshold ) ? 1.0 : 0.0;
+
+        // Gaussian weight
+        float gaussianWeight = weights[tap + radius];
+
+        // Combined weight
+        float weight = gaussianWeight * depthWeight;
+
+        // Accumulate
+        blurredValue += ssaoValue * weight;
+        totalWeight += weight;
+    }
+
+    // Normalize
+    if ( totalWeight > 0.0 )
+    {
+        blurredValue /= totalWeight;
+    }
+    else
+    {
+        // Fallback to center sample if no valid samples
+        blurredValue = tex2D( SSAOSampler, i.baseTexCoord ).r;
+    }
+
+    return float4( blurredValue, blurredValue, blurredValue, 1.0 );
+}
