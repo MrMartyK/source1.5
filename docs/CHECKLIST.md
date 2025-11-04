@@ -60,14 +60,15 @@
 
 ## Phase 3 — PBR Materials (weeks 3–5)
 
-* [ ] **PBR shader** (VMT + MRAO; Thexa4-style) compiled in `stdshaders/`
+* [x] **PBR shader foundation** (BRDF functions, VS/PS, material system) - source files ready
+* [ ] **PBR shader compilation** (add to build system, compile, test)
 * [ ] **Authoring preset**: Substance Painter export (albedo/normal/MRAO)
 * [ ] **Starter library**: 5 CC0 materials (metal/wood/concrete/plastic/fabric)
 * [ ] **Docs**: "Hello PBR Prop" (2-min video + steps)
 
 **DoD:** Side-by-side Phong vs PBR; sample assets render correctly; doc followed by fresh user in <15 min.
 
-**STATUS**: ⏸️ Not Started (after SSAO completion)
+**STATUS**: 🔄 40% Complete (shader foundation ✅, build integration pending)
 
 ---
 
@@ -138,16 +139,19 @@
 - [x] Runtime integration (ConVars → GPU)
 - [x] Comprehensive documentation (1,592 lines)
 
-### ✅ SSAO Foundation Completed (Day 5)
+### ✅ Day 5 Completed
 - [x] SSAO research (hemisphere sampling, LearnOpenGL)
 - [x] SSAO test suite (2 test cases, 7 assertions, 100% pass)
 - [x] SSAO C++ reference implementation
 - [x] SSAO HLSL shader functions
 - [x] SSAO ConVars and runtime binding
 - [x] SSAO documentation (SSAO_IMPLEMENTATION.md)
+- [x] PBR research and integration planning (520 lines)
+- [x] PBR shader foundation (BRDF, VS/PS, material system)
+- [x] Fix Windows MSVC compiler detection (engine_bridge compiles)
 
-### 🔄 In Progress (Day 5)
-- [ ] PBR shader integration (Thexa4 VMT-compatible PBR)
+### 🔄 In Progress (Day 5 continuation)
+- [ ] PBR shader build integration (add to shader compile system)
 
 ---
 

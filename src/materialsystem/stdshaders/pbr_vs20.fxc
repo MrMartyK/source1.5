@@ -1,0 +1,72 @@
+//========= Copyright Valve Corporation, All rights reserved. ============//
+//
+// Purpose: PBR (Physically-Based Rendering) Vertex Shader
+//          SM 2.0 implementation for Source SDK 2013
+//          Based on Thexa4's source-pbr
+//
+//=============================================================================
+
+#include "common_vs_fxc.h"
+
+// Vertex shader constants
+const float4x4 g_mModelViewProj : register( c0 );  // Model-view-projection matrix
+const float4x4 g_mModel         : register( c4 );  // Model matrix (world transform)
+
+struct VS_INPUT
+{
+	float4 vPos            : POSITION;   // Model space position
+	float3 vNormal         : NORMAL;     // Model space normal
+	float4 vTangent        : TANGENT;    // Model space tangent (w = binormal sign)
+	float2 vTexCoord0      : TEXCOORD0;  // Base texture UV
+	float2 vTexCoord1      : TEXCOORD1;  // Lightmap UV
+};
+
+struct VS_OUTPUT
+{
+	float4 projPos         : POSITION;   // Homogeneous clip space position
+	float2 baseTexCoord    : TEXCOORD0;  // Base texture UV
+	float2 lightmapTexCoord: TEXCOORD1;  // Lightmap UV
+	float3 worldNormal     : TEXCOORD2;  // World space normal
+	float3 worldTangent    : TEXCOORD3;  // World space tangent
+	float3 worldPos        : TEXCOORD4;  // World space position
+	float4 projPosOut      : TEXCOORD5;  // Projected position for fog
+};
+
+VS_OUTPUT main( VS_INPUT v )
+{
+	VS_OUTPUT o = (VS_OUTPUT)0;
+
+	//=========================================================================
+	// Transform Position
+	//=========================================================================
+
+	// Transform to world space
+	float4 worldPos = mul( v.vPos, g_mModel );
+	o.worldPos = worldPos.xyz;
+
+	// Transform to clip space
+	o.projPos = mul( v.vPos, g_mModelViewProj );
+	o.projPosOut = o.projPos;
+
+	//=========================================================================
+	// Transform Normals and Tangents
+	//=========================================================================
+
+	// Transform normal to world space (assuming uniform scale)
+	o.worldNormal = mul( v.vNormal, (float3x3)g_mModel );
+
+	// Transform tangent to world space
+	o.worldTangent = mul( v.vTangent.xyz, (float3x3)g_mModel );
+
+	// Note: Binormal (bitangent) is reconstructed in pixel shader:
+	// bitangent = cross(normal, tangent) * tangent.w
+
+	//=========================================================================
+	// Pass Through Texture Coordinates
+	//=========================================================================
+
+	o.baseTexCoord = v.vTexCoord0;
+	o.lightmapTexCoord = v.vTexCoord1;
+
+	return o;
+}

@@ -1,0 +1,152 @@
+//========= Copyright Valve Corporation, All rights reserved. ============//
+//
+// Purpose: PBR (Physically-Based Rendering) Pixel Shader
+//          SM 2.0b implementation for Source SDK 2013
+//          Based on Thexa4's source-pbr
+//
+//=============================================================================
+
+// Includes
+#include "common_ps_fxc.h"
+#include "pbr_helper.h"
+
+// Samplers
+sampler BaseTextureSampler        : register( s0 );  // Albedo (RGB) + Emission mask (A)
+sampler NormalTextureSampler      : register( s1 );  // Normal map
+sampler MRAOTextureSampler        : register( s2 );  // Metalness (R), Roughness (G), AO (B)
+sampler EnvmapSampler             : register( s3 );  // Environment cubemap
+sampler EmissionTextureSampler    : register( s4 );  // Emission texture (optional)
+
+// Constant registers
+const float4 g_vEyePos              : register( c0 );  // Camera world position
+
+// STATIC COMBO: Enable emission texture
+// DYNAMIC COMBO: None for now
+
+struct PS_INPUT
+{
+	float2 baseTexCoord        : TEXCOORD0;  // Base texture UV
+	float2 lightmapTexCoord    : TEXCOORD1;  // Lightmap UV
+	float3 worldNormal         : TEXCOORD2;  // World space normal
+	float3 worldTangent        : TEXCOORD3;  // World space tangent
+	float3 worldPos            : TEXCOORD4;  // World space position
+	float4 projPos             : TEXCOORD5;  // Projected position for fog
+};
+
+float4 main( PS_INPUT i ) : COLOR
+{
+	//=========================================================================
+	// Sample Textures
+	//=========================================================================
+
+	// Albedo + emission mask
+	float4 albedoSample = tex2D( BaseTextureSampler, i.baseTexCoord );
+	float3 albedo = albedoSample.rgb;
+	float emissionMask = albedoSample.a;
+
+	// Normal map (tangent space)
+	float3 normalTS = tex2D( NormalTextureSampler, i.baseTexCoord ).xyz * 2.0 - 1.0;
+
+	// MRAO: Metalness (R), Roughness (G), AO (B)
+	float3 mrao = tex2D( MRAOTextureSampler, i.baseTexCoord ).xyz;
+	float metalness = mrao.r;
+	float roughness = max(mrao.g, 0.04); // Clamp to prevent artifacts
+	float ao = mrao.b;
+
+	//=========================================================================
+	// Calculate World-Space Vectors
+	//=========================================================================
+
+	// Reconstruct TBN (tangent-bitangent-normal) matrix
+	float3 N = normalize( i.worldNormal );
+	float3 T = normalize( i.worldTangent );
+	float3 B = cross( N, T );
+	float3x3 TBN = float3x3( T, B, N );
+
+	// Transform normal from tangent space to world space
+	N = normalize( mul( normalTS, TBN ) );
+
+	// View direction (toward camera)
+	float3 V = normalize( g_vEyePos.xyz - i.worldPos );
+
+	//=========================================================================
+	// Material Properties
+	//=========================================================================
+
+	// Calculate F0 (base reflectivity)
+	float3 F0 = CalculateF0( albedo, metalness );
+
+	//=========================================================================
+	// Ambient/Indirect Lighting (IBL - Image-Based Lighting)
+	//=========================================================================
+
+	// Fresnel for ambient (roughness-aware)
+	float ndotv = saturate( dot( N, V ) );
+	float3 F = FresnelSchlickRoughness( ndotv, F0, roughness );
+
+	// Diffuse component (energy conservation)
+	float3 kd = CalculateDiffuse( albedo, metalness, F );
+
+	// Sample environment map for diffuse irradiance
+	// Note: In a full implementation, this would be a pre-filtered diffuse cubemap
+	float3 irradiance = texCUBE( EnvmapSampler, N ).rgb;
+	float3 diffuse = kd * irradiance;
+
+	// Specular IBL (simplified - full version needs pre-filtered specular map)
+	// Sample environment map with roughness-based mip level
+	float mipLevel = roughness * 7.0; // Assume 8 mip levels (0-7)
+	float3 R = reflect( -V, N );
+	float3 prefilteredColor = texCUBElod( EnvmapSampler, float4( R, mipLevel ) ).rgb;
+
+	// Environment BRDF approximation
+	float2 envBRDF = EnvBRDFApprox( F0, roughness, ndotv );
+	float3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+
+	// Combine ambient lighting
+	float3 ambient = (diffuse + specular) * ao;
+
+	//=========================================================================
+	// Direct Lighting (Simplified - would iterate over dynamic lights)
+	//=========================================================================
+
+	// For now, just use ambient lighting
+	// Full implementation would add:
+	// - Dynamic light sources
+	// - Flashlight
+	// - Point lights
+	// - Spot lights
+	float3 directLighting = float3( 0.0, 0.0, 0.0 );
+
+	//=========================================================================
+	// Emission
+	//=========================================================================
+
+	float3 emission = float3( 0.0, 0.0, 0.0 );
+
+	#if EMISSION_TEXTURE
+		// Sample emission texture and modulate by mask
+		float3 emissionColor = tex2D( EmissionTextureSampler, i.baseTexCoord ).rgb;
+		emission = emissionColor * emissionMask;
+	#endif
+
+	//=========================================================================
+	// Final Color
+	//=========================================================================
+
+	float3 finalColor = ambient + directLighting + emission;
+
+	//=========================================================================
+	// Tonemapping and Fog
+	//=========================================================================
+
+	// Apply fog (using existing Source fog system)
+	float fogFactor = CalcPixelFogFactor( PIXEL_FOG_TYPE_RANGE, g_FogParams,
+	                                      g_vEyePos.z, i.worldPos.z, i.projPos.z );
+	finalColor = BlendPixelFog( finalColor, fogFactor, g_LinearFogColor.rgb, PIXEL_FOG_TYPE_RANGE );
+
+	// Apply tonemapping (use existing FinalOutput if available, or simple gamma)
+	// For now, simple gamma correction
+	finalColor = LinearToGamma( finalColor );
+
+	return float4( finalColor, 1.0 );
+}
