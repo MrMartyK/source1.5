@@ -47,12 +47,15 @@ jobs:
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
+      if: success()
       with:
-        name: windows-x64-binaries
+        name: windows-x64-sdk-binaries
         path: |
-          game/*/bin/*.dll
-          game/*/bin/*.pdb
+          src/game/*/bin/client.dll
+          src/game/*/bin/server.dll
+          src/game/*/bin/*.pdb
         retention-days: 7
+      continue-on-error: true
 
     - name: Run basic smoke tests
       if: success()
